@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>پرسشنامه سونوگرافی</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<style>
+body { font-family: Tahoma, sans-serif; direction: rtl; padding:20px; background:#f9f9f9;}
+.container { max-width:900px; margin:auto; }
+
+.question-box {
+  border:2px solid #40BFC1;
+  border-radius:8px;
+  padding:20px;
+  margin-bottom:30px; /* فاصله زیر سوال */
+  background:#e0f7f9;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+  font-weight:bold;
+  font-size:20px;
+}
+
+.options { 
+  display:flex; 
+  flex-direction:column; 
+  gap:6px; 
+  margin-top:30px; /* فاصله بالای گزینه‌ها */
+  margin-bottom:40px; /* فاصله پایین گزینه‌ها تا نمودار */
+}
+
+.option { 
+  padding:8px 12px; 
+  border-radius:5px; 
+  border:1px solid #ccc; 
+  text-align:right; 
+  font-weight:bold; 
+  font-size:15px; 
+}
+
+.details-table { width:100%; border-collapse: collapse; font-size:12px; margin-top:20px;}
+.details-table th, .details-table td { border:1px solid #ccc; padding:6px; text-align:center; }
+.details-table th { background:#d3d3d3; }
+
+canvas {
+  width:100%; 
+  height:350px; 
+  margin-bottom:20px;
+  margin-top:15px;
+}
+
+.footer { text-align:center; font-size:12px; margin-top:30px; color:#555; font-weight:bold; }
+.bold { font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="container">
+<label class="bold">انتخاب سوال:</label>
+<select id="questionSelect">
+  <option value="">-- سوال را انتخاب کنید --</option>
+  <option value="0">سوال 1</option>
+  <option value="1">سوال 2</option>
+  <option value="2">سوال 3</option>
+  <option value="3">سوال 4</option>
+  <option value="4">سوال 5</option>
+  <option value="5">سوال 6</option>
+  <option value="6">سوال 7</option>
+  <option value="7">سوال 8</option>
+  <option value="8">سوال 9</option>
+  <option value="9">سوال 10</option>
+  <option value="10">سوال 11</option>
+</select>
+
+<div id="questionContainer" style="margin-top:20px; display:none;">
+  <div class="question-box" id="questionText"></div>
+  <div class="options" id="optionsContainer"></div>
+  <canvas id="chartCanvas"></canvas>
+  <table class="details-table" id="detailsTable">
+    <thead>
+      <tr><th>گزینه</th><th>قبل از کارگاه</th><th>بعد از کارگاه</th><th>جزئیات پله‌ای</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="footer">دکتر محمدرضا بخشی</div>
+
+<script>
+const questions = [
+  {text:"1. آیا با دستگاه سونوگرافی و تصویربرداری حاصل از آن آشنایی دارید؟",
+   options:["الف) بله و شناخت نسبی خوبی دارم","ب) بله ولی شناخت نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[1,16],[5,7],[18,1]],
+   details:["1 + 5 (یک پله) + 10 (دو پله)","0 + 7 (یک پله)","1 (ثابت)"]
+  },
+  {text:"2. آیا درمورد کاربرد سونوگرافی در شناسایی موارد مخاطره آمیز اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[2,16],[6,7],[1,1]],
+   details:["2 + 5 (یک پله) + 9 (دو پله)","1 + 6 (یک پله)","1 (ثابت)"]
+  },
+  {text:"3. آیا درمورد کاربرد سونوگرافی در شناسایی موارد مخاطره آمیز در موارد تروما اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[2,19],[8,5],[14,0]],
+   details:["2 + 8 (یک پله) + 9 (دو پله)","0 + 5 (یک پله)","0 (ثابت)"]
+  },
+  {text:"4. آیا درمورد کاربرد سونوگرافی در شناسایی خونریزی داخل شکمی یا لگنی در موارد ترومایی اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[2,20],[9,3],[13,1]],
+   details:["2 + 9 (یک پله) + 9 (دو پله)","0 + 3 (یک پله)","1 (ثابت)"]
+  },
+  {text:"5. آیا درمورد کاربرد سونوگرافی در شناسایی آسیب احشای شکمی و لگنی در موارد ترومایی اطلاعی دارید؟",
+
+options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[0,8],[10,11],[14,5]],
+   details:["6 (یک پله)+2 (دو پله)","4 (ثابت)+7 (یک پله)","5 (ثابت)"]
+  },
+  {text:"6. آیا درمورد کاربرد سونوگرافی در شناسایی هموتوراکس (تجمع خون در کیسه دور ریه ها) در موارد ترومایی اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[1,20],[5,3],[18,1]],
+   details:["1 + 5 (یک پله)+14 (دو پله)","0 + 3 (یک پله)","1 (ثابت)"]
+  },
+  {text:"7. آیا درمورد کاربرد سونوگرافی در شناسایی پنوموتوراکس (تجمع هوا در کیسه دور ریه ها) در موارد ترومایی اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[0,16],[4,6],[20,2]],
+   details:["0 + 3 (یک پله)+13 (دو پله)","1 + 5 (یک پله)","2 (ثابت)"]
+  },
+  {text:"8. آیا درمورد کاربرد سونوگرافی در شناسایی هموپریکارد (خونریزی در کیسه دور قلب) در موارد ترومایی اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[1,18],[2,2],[21,4]],
+   details:["1 + 2 (یک پله)+15 (دو پله)","0 + 2 (دو پله)","4 (ثابت)"]
+  },
+  {text:"9. آیا درمورد کاربرد سونوگرافی در شناسایی پنوموپریتوئن (تجمع هوا در کیسه صفاقی شکم) در موارد ترومایی اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[0,3],[3,16],[21,5]],
+   details:["0 + 2 (یک پله)+1 (دو پله)","1 + 15 (یک پله)","5 (ثابت)"]
+  },
+  {text:"10. آیا درمورد نماهای سونوگرافی در شناسایی موارد مخاطره آمیز در موارد تروما اطلاعی دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر آشنایی خاصی ندارم"],
+   data:[[0,19],[1,4],[23,1]],
+   details:["0 + 0 + 19 (دوپله)","0 + 4 (یک پله)","1 (ثابت)"]
+  },
+  {text:"11. آیا مهارت استفاده از دستگاه سونوگرافی برای تهیه نماهای مطلوب در شناسایی موارد مخاطره آمیز در بیماران ترومایی را دارید؟",
+   options:["الف) بله و اطلاعات نسبی خوبی دارم","ب) بله ولی اطلاعات نسبی پایینی دارم","ج) خیر هیچ مهارت خاصی ندارم"],
+   data:[[0,19],[0,5],[24,0]],
+   details:["0 + 0 + 19 (دوپله)","0 + 5 (یک پله)","0 (ثابت)"]
+  }
+];
+
+const colors = ['#40BFC1','#A569BD','#FFA500'];
+let chartInstance = null;
+
+function createPattern(ctx,color){
+  const pCanvas=document.createElement('canvas');
+  pCanvas.width=12; pCanvas.height=12;
+  const pctx=pCanvas.getContext('2d');
+  pctx.strokeStyle=color;  
+  pctx.lineWidth=2;      
+  pctx.beginPath();
+  pctx.moveTo(0,0); pctx.lineTo(12,12);
+  pctx.moveTo(12,0); pctx.lineTo(0,12);
+  pctx.stroke();
+  return ctx.createPattern(pCanvas,'repeat');
+}
+
+function showQuestion(index){
+  const q = questions[index];
+  document.getElementById('questionContainer').style.display='block';
+  document.getElementById('questionText').innerText = q.text;
+
+  const optionsDiv = document.getElementById('optionsContainer');
+  optionsDiv.innerHTML = '';
+  q.options.forEach((opt,i)=>{
+    const div = document.createElement('div');
+    div.className='option';
+    div.innerText=opt;
+    div.style.backgroundColor = colors[i];
+    optionsDiv.appendChild(div);
+  });
+
+  const tbody = document.getElementById('detailsTable').querySelector('tbody');
+  tbody.innerHTML='';
+  q.options.forEach((opt,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML=<td>${opt.charAt(0)}</td><td>${q.data[i][0]}</td><td>${q.data[i][1]}</td><td>${q.details[i]}</td>;
+    tbody.appendChild(tr);
+  });
+
+  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['الف','ب','ج'],
+      datasets:[
+        {label:'قبل از کارگاه', data:q.data.map(d=>d[0]), backgroundColor: colors, barPercentage:0.6, categoryPercentage:0.6},
+
+{label:'بعد از کارگاه', data:q.data.map(d=>d[1]), backgroundColor: colors.map(c=>createPattern(ctx,c)), borderColor:'#000', borderWidth:1, barPercentage:0.6, categoryPercentage:0.6}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      plugins:{
+        legend:{position:'top'},
+        tooltip:{enabled:true},
+        datalabels:{
+          display:true,
+          anchor:'end',
+          align:'end',
+          formatter: function(value){ return value; },
+          font:{weight:'bold'}
+        }
+      },
+      scales:{
+        y:{beginAtZero:true, ticks:{precision:0}}
+      }
+    },
+    plugins:[ChartDataLabels]
+  });
+}
+
+document.getElementById('questionSelect').addEventListener('change', function(){
+  if(this.value!=='') showQuestion(parseInt(this.value));
+});
+</script>
+</div>
+</body>
+</html>
